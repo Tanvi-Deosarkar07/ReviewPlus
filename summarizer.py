@@ -1,14 +1,20 @@
-import openai
-import streamlit as st  # Required for accessing secrets
+import streamlit as st
+import os
+from openai import OpenAI
 
-# Load the API key from Streamlit secrets (ideal for Streamlit Cloud)
+# Load API Key
 def load_api_key():
-    return st.secrets["OPENAI_API_KEY"]
+    if "OPENAI_API_KEY" in st.secrets:
+        return st.secrets["OPENAI_API_KEY"]
+    elif os.path.exists("openai_key.txt"):
+        return open("openai_key.txt").read().strip()
+    else:
+        raise ValueError("OpenAI API key not found.")
 
-openai.api_key = load_api_key()
+client = OpenAI(api_key=load_api_key())  # ✅ NEW SDK pattern
 
 def summarize_reviews(reviews_list):
-    joined_reviews = "\n\n".join(reviews_list[:50])  # Limit for brevity
+    joined_reviews = "\n\n".join(reviews_list[:50])  # Limit for token budget
     prompt = f"""
     Summarize the following customer reviews into:
     1. Bugs
@@ -19,13 +25,9 @@ def summarize_reviews(reviews_list):
     Reviews:\n{joined_reviews}
     """
 
-    response = openai.ChatCompletion.create(
+    response = client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[{"role": "user", "content": prompt}]
     )
-
-    summary = response['choices'][0]['message']['content']
-    return summary
-
 
     return response.choices[0].message.content
